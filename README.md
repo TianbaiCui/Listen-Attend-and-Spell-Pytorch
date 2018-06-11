@@ -121,6 +121,8 @@ If you have any questions, please contact b03902034[AT]ntu.edu.tw
 
     After preprocessing step, `train.csv`/`test.csv`/`dev.csv`/`idx2chap.csv` should be in your LibriSpeech folder. Extracted feature is stored in npy format.
 
+    *** LibriSpeech includes over 1000 hours of speech, process it with powerful computer ( enough cores and large RAM ) is strongly recommanded. ***
+
 - LAS Model
   ​      
         mkdir -p checkpoint

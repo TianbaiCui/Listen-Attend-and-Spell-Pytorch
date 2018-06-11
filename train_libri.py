@@ -145,14 +145,14 @@ while global_step<total_steps:
     att_map = {i:[] for i in range(conf['training_parameter']['batch_size'])}
     num_head = len(attention_score[0])
     for i in range(conf['training_parameter']['batch_size']):
-        for j in num_head:
+        for j in range(num_head):
             att_map[i].append([])
     for t,head_score in enumerate(attention_score):
         for h,att_score in enumerate(head_score):
             for idx,att in enumerate(att_score.cpu().data.numpy()):
                 att_map[idx][h].append(att)
     for i in range(conf['training_parameter']['batch_size']):
-        for j in num_head:
+        for j in range(num_head):
             m = np.repeat(np.expand_dims(np.array(att_map[i][j]),0),3,axis=0)
             log_writer.add_image('attention_'+str(i)'_head_'+str(j),
                                  torch.FloatTensor(m[:,:len(pd[i]),:]), global_step)
