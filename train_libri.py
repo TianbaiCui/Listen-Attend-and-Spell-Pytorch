@@ -45,7 +45,7 @@ if torch.cuda.is_available():
 # Load preprocessed LibriSpeech Dataset
 
 train_set = create_dataloader(conf['meta_variable']['data_path']+'/train.csv', 
-                              **conf['model_parameter'], **conf['training_parameter'], shuffle=True)
+                              **conf['model_parameter'], **conf['training_parameter'], shuffle=True,training=True)
 valid_set = create_dataloader(conf['meta_variable']['data_path']+'/dev.csv',
                               **conf['model_parameter'], **conf['training_parameter'], shuffle=False,drop_last=True)
 
@@ -55,6 +55,7 @@ with open(conf['meta_variable']['data_path']+'/idx2chap.csv','r') as f:
         if 'idx' in line:continue
         idx2char[int(line.split(',')[0])] = line[:-1].split(',')[1]
 
+# Load pre-trained model if needed
 if conf['training_parameter']['use_pretrained']:
     global_step = conf['training_parameter']['pretrained_step']
     listener = torch.load(conf['training_parameter']['pretrained_listener_path'])
@@ -66,12 +67,11 @@ else:
 optimizer = torch.optim.Adam([{'params':listener.parameters()}, {'params':speller.parameters()}], 
                               lr=conf['training_parameter']['learning_rate'])
 
-
-
 best_ler = 1.0
 record_gt_text = False
 log_writer = SummaryWriter(conf['meta_variable']['training_log_dir']+conf['meta_variable']['experiment_name'])
 
+# Training
 while global_step<total_steps:
 
     # Teacher forcing rate linearly decay
@@ -92,6 +92,8 @@ while global_step<total_steps:
         
         if global_step % valid_step == 0:
             break
+        
+
     
     # Validation
     val_loss = []
@@ -105,7 +107,7 @@ while global_step<total_steps:
     
     
     val_loss = np.array([sum(val_loss)/len(valid_set)])
-    val_ler = np.array([sum(val_ler)/len(valid_set)])
+    val_ler = np.array([sum(val_ler)/len(val_ler)])
     log_writer.add_scalars('loss',{'dev':val_loss}, global_step)
     log_writer.add_scalars('cer',{'dev':val_ler}, global_step)
 
@@ -116,6 +118,13 @@ while global_step<total_steps:
     else:
         feature = listener(Variable(batch_data.float()).squeeze().cuda())
     pred_seq, attention_score = speller(feature)
+    
+    pred_seq = [char.cpu() for char in pred_seq]
+    for t in range(len(attention_score)):
+        for h in range(len(attention_score[t])):
+            attention_score[t][h] = attention_score[t][h].cpu()
+    del feature
+    
     
     pd = {i:'' for i in range(conf['training_parameter']['batch_size'])}
     for t,char in enumerate(pred_seq):
@@ -149,17 +158,17 @@ while global_step<total_steps:
             att_map[i].append([])
     for t,head_score in enumerate(attention_score):
         for h,att_score in enumerate(head_score):
-            for idx,att in enumerate(att_score.cpu().data.numpy()):
+            for idx,att in enumerate(att_score.data.numpy()):
                 att_map[idx][h].append(att)
     for i in range(conf['training_parameter']['batch_size']):
         for j in range(num_head):
             m = np.repeat(np.expand_dims(np.array(att_map[i][j]),0),3,axis=0)
-            log_writer.add_image('attention_'+str(i)'_head_'+str(j),
+            log_writer.add_image('attention_'+str(i)+'_head_'+str(j),
                                  torch.FloatTensor(m[:,:len(pd[i]),:]), global_step)
     
     # Checkpoint
     if best_ler >= sum(val_ler)/len(val_ler):
         best_ler = sum(val_ler)/len(val_ler)
+        print('Reached best CER',best_ler,'at step',global_step,',checkpoint saved.')
         torch.save(listener, listener_model_path)
         torch.save(speller, speller_model_path)
-
