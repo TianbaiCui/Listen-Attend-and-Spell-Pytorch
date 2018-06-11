@@ -22,9 +22,12 @@ paras = parser.parse_args()
 config_path = paras.config_path
 
 # Load config file for experiment
+print('Loading configure file at',config_path)
 conf = yaml.load(open(config_path,'r'))
 
 # Parameters loading
+print()
+print('Experiment :',conf['meta_variable']['experiment_name'])
 total_steps = conf['training_parameter']['total_steps']
 
 listener_model_path = conf['meta_variable']['checkpoint_dir']+conf['meta_variable']['experiment_name']+'.listener'
@@ -72,6 +75,7 @@ record_gt_text = False
 log_writer = SummaryWriter(conf['meta_variable']['training_log_dir']+conf['meta_variable']['experiment_name'])
 
 # Training
+print('Training starts...',flush=True)
 while global_step<total_steps:
 
     # Teacher forcing rate linearly decay
