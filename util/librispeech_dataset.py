@@ -71,27 +71,27 @@ class LibrispeechDataset(Dataset):
             if self.training:
                 pass
             else:
-            bucket_x = []
-            bucket_y = []
-            for b in tqdm(range(int(np.ceil(len(X)/batch_size)))):
-                left = b*batch_size
-                if (b+1)*batch_size<len(X):
-                    right = (b+1)*batch_size
-                else:
-                    if drop_last:
-                        break
+                bucket_x = []
+                bucket_y = []
+                for b in tqdm(range(int(np.ceil(len(X)/batch_size)))):
+                    left = b*batch_size
+                    if (b+1)*batch_size<len(X):
+                        right = (b+1)*batch_size
                     else:
-                        right = len(X)
-                pad_len = len(X[left]) if (len(X[left]) % 8) == 0 else\
-                          len(X[left])+(8-len(X[left])%8)
-                if training:
-                    onehot_len = min(max([len(y) for y in Y[left:right]])+1,max_label_len)
-                else:
-                    onehot_len = max([len(y) for y in Y[left:right]])+1
-                bucket_x.append(ZeroPadding(X[left:right], pad_len))
-                bucket_y.append(OneHotEncode(Y[left:right], onehot_len))
-            self.X = bucket_x
-            self.Y = bucket_y
+                        if drop_last:
+                            break
+                        else:
+                            right = len(X)
+                    pad_len = len(X[left]) if (len(X[left]) % 8) == 0 else\
+                              len(X[left])+(8-len(X[left])%8)
+                    if training:
+                        onehot_len = min(max([len(y) for y in Y[left:right]])+1,max_label_len)
+                    else:
+                        onehot_len = max([len(y) for y in Y[left:right]])+1
+                    bucket_x.append(ZeroPadding(X[left:right], pad_len))
+                    bucket_y.append(OneHotEncode(Y[left:right], onehot_len))
+                self.X = bucket_x
+                self.Y = bucket_y
 
     def __getitem__(self, index):
         if not self.bucketing:
