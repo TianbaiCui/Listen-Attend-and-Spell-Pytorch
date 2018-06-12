@@ -107,11 +107,9 @@ class LibrispeechDataset(Dataset):
             else:
                 onehot_len = max([len(y) for y in Y])+1
             return ZeroPadding(X, pad_len),OneHotEncode(Y, onehot_len)
-
-
         
     def __len__(self):
-        return len(self.X)
+        return len(self.data_table)
 
 
 def create_dataloader(data_path, max_label_len, batch_size, shuffle, bucketing, drop_last=False, training=False, 
