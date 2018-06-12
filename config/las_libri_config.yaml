@@ -8,10 +8,10 @@ model_parameter:
   max_label_len: 300                          # 
   input_feature_dim: 40                       # 
   listener_hidden_dim: 256                    # Default listener LSTM output dimension from LAS paper
-  multi_head: 4                               # Numbers of head for multi-head attention
+  multi_head: 1                               # Numbers of head for multi-head attention
   use_mlp_in_attention: True                  # Set to False to exclude phi and psi in attention formula
   mlp_dim_in_attention: 128                   #
-  mlp_activate_in_attention: 'None'           #
+  mlp_activate_in_attention: 'ReLU'           #
   speller_rnn_layer: 1                        # Default RNN layer number 
   speller_hidden_dim: 512                     # Default speller LSTM output dimension from LAS paper
   output_class_dim: 30                        # 61 phonemes + 2 for <sos> & <eos>
@@ -23,7 +23,7 @@ training_parameter:
   learning_rate: 0.0001
   seed: 1                  
   total_steps: 1000000
-  batch_size: 4
+  batch_size: 8
   tf_rate_upperbound: 0.9                    # teacher forcing rate during training will be linearly
   tf_rate_lowerbound: 0.5                    # decayinn from upperbound to lower bound for each epoch
   tf_decay_step: 100000
