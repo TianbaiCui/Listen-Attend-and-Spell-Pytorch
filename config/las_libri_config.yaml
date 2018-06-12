@@ -11,7 +11,7 @@ model_parameter:
   multi_head: 1                               # Numbers of head for multi-head attention
   use_mlp_in_attention: True                  # Set to False to exclude phi and psi in attention formula
   mlp_dim_in_attention: 128                   #
-  mlp_activate_in_attention: 'ReLU'           #
+  mlp_activate_in_attention: 'relu'           #
   speller_rnn_layer: 1                        # Default RNN layer number 
   speller_hidden_dim: 512                     # Default speller LSTM output dimension from LAS paper
   output_class_dim: 30                        # 61 phonemes + 2 for <sos> & <eos>
