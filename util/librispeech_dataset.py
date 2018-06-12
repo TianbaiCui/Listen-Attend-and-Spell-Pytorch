@@ -71,6 +71,7 @@ class LibrispeechDataset(Dataset):
             if self.training:
                 pass
             else:
+                X,Y = load_dataset(data_path)
                 bucket_x = []
                 bucket_y = []
                 for b in tqdm(range(int(np.ceil(len(X)/batch_size)))):
