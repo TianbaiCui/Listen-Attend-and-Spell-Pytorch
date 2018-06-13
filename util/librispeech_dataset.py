@@ -115,7 +115,7 @@ class LibrispeechDataset(Dataset):
                 return self.X[index],self.Y[index]
         
     def __len__(self):
-        if if self.training:
+        if self.training:
             return len(self.data_table)
         else:
             return len(self.X)
