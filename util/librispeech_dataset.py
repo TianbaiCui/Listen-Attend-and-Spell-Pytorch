@@ -115,7 +115,10 @@ class LibrispeechDataset(Dataset):
                 return self.X[index],self.Y[index]
         
     def __len__(self):
-        return len(self.data_table)
+        if if self.training:
+            return len(self.data_table)
+        else:
+            return len(self.X)
 
 
 def create_dataloader(data_path, max_label_len, batch_size, shuffle, bucketing, drop_last=False, training=False, 
