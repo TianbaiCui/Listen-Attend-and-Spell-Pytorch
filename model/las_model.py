@@ -59,10 +59,11 @@ class Listener(nn.Module):
 class Speller(nn.Module):
     def __init__(self, output_class_dim,  speller_hidden_dim, rnn_unit, speller_rnn_layer, use_gpu, max_label_len,
                  use_mlp_in_attention, mlp_dim_in_attention, mlp_activate_in_attention, listener_hidden_dim,
-                 multi_head, **kwargs):
+                 multi_head, decode_mode, **kwargs):
         super(Speller, self).__init__()
         self.rnn_unit = getattr(nn,rnn_unit.upper())
         self.max_label_len = max_label_len
+        self.decode_mode = decode_mode
         self.use_gpu = use_gpu
         self.float_type = torch.torch.cuda.FloatTensor if use_gpu else torch.FloatTensor
         self.label_dim = output_class_dim
@@ -112,13 +113,15 @@ class Speller(nn.Module):
             if teacher_force:
                 output_word = ground_truth[:,step:step+1,:].type(self.float_type)
             else:
-                # Case 1. raw output as input
-                #output_word = raw_pred.unsqueeze(1)
-                # Case 2. One-hot form of raw output as input
-                output_word = torch.zeros_like(raw_pred)
-                for idx,i in enumerate(raw_pred.topk(1)[1]):
-                    output_word[idx,int(i)] = 1
-                output_word = output_word.unsqueeze(1)
+                # Case 0. raw output as input
+                if self.decode_mode == 0:
+                    output_word = raw_pred.unsqueeze(1)
+                # Case 1. One-hot form of raw output as input
+                else:
+                    output_word = torch.zeros_like(raw_pred)
+                    for idx,i in enumerate(raw_pred.topk(1)[1]):
+                        output_word[idx,int(i)] = 1
+                    output_word = output_word.unsqueeze(1)
                 
             rnn_input = torch.cat([output_word,context.unsqueeze(1)],dim=-1)
 
