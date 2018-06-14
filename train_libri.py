@@ -106,11 +106,11 @@ while global_step<total_steps:
     for batch_data,batch_label in valid_set:
         batch_loss, batch_ler = batch_iterator(batch_data, batch_label, listener, speller, optimizer, 
                                                tf_rate, is_training=False, data='libri', **conf['model_parameter'])
-        val_loss.extend(batch_loss)
+        val_loss.append(batch_loss)
         val_ler.extend(batch_ler)
     
     
-    val_loss = np.array([sum(val_loss)/len(valid_set)])
+    val_loss = np.array([sum(val_loss)/len(val_loss)])
     val_ler = np.array([sum(val_ler)/len(val_ler)])
     log_writer.add_scalars('loss',{'dev':val_loss}, global_step)
     log_writer.add_scalars('cer',{'dev':val_ler}, global_step)
