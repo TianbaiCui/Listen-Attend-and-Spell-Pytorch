@@ -93,6 +93,8 @@ class Speller(nn.Module):
         batch_size = listener_feature.size()[0]
 
         output_word = CreateOnehotVariable(self.float_type(np.zeros((batch_size,1))),self.label_dim)
+        if self.use_gpu:
+            output_word = output_word.cuda()
         rnn_input = torch.cat([output_word,listener_feature[:,0:1,:]],dim=-1)
 
         hidden_state = None
