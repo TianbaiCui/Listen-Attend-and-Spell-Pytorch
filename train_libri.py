@@ -139,7 +139,7 @@ while global_step<total_steps:
     pd = [pd[i] for i in range(conf['training_parameter']['batch_size'])]
 
     gt = []
-    for line in torch.max(batch_label.squeeze(),dim=-1)[1]:
+    for line in (torch.max(batch_label.squeeze(),dim=-1)[1]).item:
         tmp = ''
         for idx in line:
             if idx == 0: continue
