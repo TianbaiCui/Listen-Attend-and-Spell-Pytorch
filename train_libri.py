@@ -96,7 +96,6 @@ while global_step<total_steps:
         
         if global_step % valid_step == 0:
             break
-        
 
     
     # Validation
@@ -139,7 +138,7 @@ while global_step<total_steps:
     pd = [pd[i] for i in range(conf['training_parameter']['batch_size'])]
 
     gt = []
-    for line in (torch.max(batch_label.squeeze(),dim=-1)[1]).item:
+    for line in (torch.max(batch_label.squeeze(),dim=-1)[1]).numpy():
         tmp = ''
         for idx in line:
             if idx == 0: continue
