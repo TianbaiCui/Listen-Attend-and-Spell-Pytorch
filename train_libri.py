@@ -68,7 +68,7 @@ else:
     listener = Listener(**conf['model_parameter'])
     speller = Speller(**conf['model_parameter'])
 optimizer = torch.optim.Adam([{'params':listener.parameters()}, {'params':speller.parameters()}], 
-                              lr=conf['training_parameter']['learning_rate'])
+                              lr=conf['training_parameter']['learning_rate'],betas=(0.5, 0.999))
 
 best_ler = 1.0
 record_gt_text = False
@@ -79,7 +79,7 @@ print('Training starts...',flush=True)
 while global_step<total_steps:
 
     # Teacher forcing rate linearly decay
-    tf_rate = tf_rate_upperbound - (tf_rate_upperbound-tf_rate_lowerbound)*min((global_step/tf_decay_step),1)
+    tf_rate = tf_rate_upperbound - (tf_rate_upperbound-tf_rate_lowerbound)*min((float(global_step)/tf_decay_step),1)
     
     
     # Training

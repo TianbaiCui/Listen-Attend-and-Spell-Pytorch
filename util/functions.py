@@ -82,8 +82,8 @@ def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rat
         raw_pred_seq, _ = speller(listner_feature,ground_truth=None,teacher_force_rate=0)
 
     pred_y = torch.cat([torch.unsqueeze(each_y,1) for each_y in raw_pred_seq],1)[:,:max_label_len,:]
-    pred_y = pred_y.contiguous().view(-1,output_class_dim)
-    true_y = torch.max(batch_label,dim=2)[1][:,:max_label_len].contiguous().view(-1)
+    pred_y = pred_y.contiguous().permute(0,2,1)#pred_y.contiguous().view(-1,output_class_dim)
+    true_y = torch.max(batch_label,dim=2)[1][:,:max_label_len].contiguous()#.view(-1)
 
     loss = objective(pred_y,true_y)
 
@@ -93,8 +93,8 @@ def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rat
 
     batch_loss = loss.cpu().data.numpy()
     # variable -> numpy before sending into LER calculator
-    batch_ler = LetterErrorRate(torch.max(pred_y,dim=1)[1].cpu().data.numpy().reshape(current_batch_size,max_label_len),
-                                true_y.cpu().data.numpy().reshape(current_batch_size,max_label_len), data)
+    batch_ler = LetterErrorRate(torch.max(pred_y.permute(0,2,1),dim=2)[1].cpu().numpy(),#.reshape(current_batch_size,max_label_len),
+                                true_y.cpu().data.numpy(),data) #.reshape(current_batch_size,max_label_len), data)
 
 
     return batch_loss, batch_ler
