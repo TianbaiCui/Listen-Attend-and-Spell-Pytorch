@@ -19,6 +19,10 @@ The input feature is MFCC 39 (13+delta+accelerate), and the output phoneme class
 
 ![](log/attention.jpg)
 
+### LibriSpeech
+
+For LibriSpeech, the input feature is 40-dimensional log-mel filter bank computed every 10ms as specified in the original paper. The decoder is character based, outputting the distribution over 30 characters (including alphabet and punctuation).
+
 ##  Remarks
 
 ### Differences from the paper
@@ -44,6 +48,10 @@ Be aware of some differences between this implementation and the originally prop
 -   Multi-head Attention (MHA)
 
     Google had released another [paper](https://arxiv.org/abs/1712.01769) introducing state-of-the-art end2end ASR based on LAS. According to the paper, they modified the attention mechanism to MHA and gain remarkable performance improvement. We've implemented MHA as described in section 2.2.2. in the paper and enable it when training on LibriSpeech. It is worth to mention that MHA increases the training time of LAS (which was already too slow), so consider disable MHA by setting multi_head=1 in config on slower GPU.
+
+-   Label Smoothing
+
+    Like MHA, label smoothing was mentioned in the same [paper](https://arxiv.org/abs/1712.01769) and show significant improvement on LAS. However, pytorch's loss function design makes it difficult to implement label smoothing. In this implementation, label smoothing is achieved by self-defined loss function (can be found at [functions.py](util/functions.py)). The implementation may be numerical unstable comparing to native loss function provided by pytorch, you may disable label smoothing by setting it to 0 in config file. We will be very thankful for bug report or sugestion on label smoothing implementation.
 
 ## Requirements
 
@@ -81,9 +89,9 @@ Be aware of some differences between this implementation and the originally prop
 
     Progress bar for visualization.
 
-- [PyTorch](http://pytorch.org/) (0.3.0)
+- [PyTorch](http://pytorch.org/) (0.4.0)
 
-    Please use PyTorch 0.3.0 in which the [softmax bug](https://github.com/pytorch/pytorch/issues/1020) on 3D input is fixed.
+    Please use PyTorch 0.4.0 in where loss computation over 2D target is availible and the [softmax bug](https://github.com/pytorch/pytorch/issues/1020) on 3D input is fixed.
 
 
 - [editdistance](https://github.com/aflc/editdistance)
@@ -152,7 +160,6 @@ Be aware of some differences between this implementation and the originally prop
 
 - Supply experiment result of LibriSpeech dataset
 - WSJ Dataset
-- Reduce memory usage
 
 ## Acknowledgements
 - Special thanks to [William Chan](http://williamchan.ca/), the first author of LAS, for answering my questions during implementation.

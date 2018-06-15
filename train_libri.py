@@ -68,8 +68,7 @@ else:
     listener = Listener(**conf['model_parameter'])
     speller = Speller(**conf['model_parameter'])
 optimizer = torch.optim.Adam([{'params':listener.parameters()}, {'params':speller.parameters()}], 
-                              lr=conf['training_parameter']['learning_rate'],
-                              betas=(0.5, 0.999),weight_decay=1e-5,amsgrad=True)
+                              lr=conf['training_parameter']['learning_rate'])
 
 best_ler = 1.0
 record_gt_text = False
