@@ -109,7 +109,8 @@ def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rat
 
     else:
         true_y = batch_label[:,:max_label_len,:].contiguous()
-        loss = label_smoothing_loss(pred_y,true_y.type(torch.FloatTensor),label_smoothing=label_smoothing)
+        true_y = true_y.type(torch.cuda.FloatTensor) if use_gpu else true_y.type(torch.FloatTensor)
+        loss = label_smoothing_loss(pred_y,true_y,label_smoothing=label_smoothing)
         batch_ler = LetterErrorRate(torch.max(pred_y,dim=2)[1].cpu().numpy(),#.reshape(current_batch_size,max_label_len),
                                     torch.max(true_y,dim=2)[1].cpu().data.numpy(),data) #.reshape(current_batch_size,max_label_len), data)
 
