@@ -37,7 +37,6 @@ valid_step = conf['training_parameter']['valid_step']
 tf_rate_upperbound = conf['training_parameter']['tf_rate_upperbound']
 tf_rate_lowerbound = conf['training_parameter']['tf_rate_lowerbound']
 tf_decay_step = conf['training_parameter']['tf_decay_step']
-label_smoothing = conf['training_parameter']['label_smoothing']
 seed = conf['training_parameter']['seed']
 
 # Fix random seed
@@ -89,7 +88,7 @@ while global_step<total_steps:
         print('Current step :',global_step,end='\r',flush=True)
         
         batch_loss, batch_ler = batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rate,
-                                               is_training=True, label_smoothing=label_smoothing,data='libri', **conf['model_parameter'])
+                                               is_training=True, data='libri', **conf['model_parameter'])
         global_step += 1
 
         if (global_step) % verbose_step == 0:

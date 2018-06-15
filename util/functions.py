@@ -98,7 +98,7 @@ def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rat
 
     pred_y = (torch.cat([torch.unsqueeze(each_y,1) for each_y in raw_pred_seq],1)[:,:max_label_len,:]).contiguous()
 
-    if label_smoothing == 0.0:
+    if label_smoothing == 0.0 or not(is_training):
         pred_y = pred_y.permute(0,2,1)#pred_y.contiguous().view(-1,output_class_dim)
         true_y = torch.max(batch_label,dim=2)[1][:,:max_label_len].contiguous()#.view(-1)
 
