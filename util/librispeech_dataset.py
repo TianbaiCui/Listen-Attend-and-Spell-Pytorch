@@ -36,7 +36,7 @@ def ZeroPadding(x,pad_len):
 # each sequence should end with an <eos> (index = 1)
 # Input y: list of np array with shape ()
 # Output tuple: (indices, values, shape)
-def OneHotEncode(Y,max_len,max_idx=30,label_smoothing=0.0):
+def OneHotEncode(Y,max_len,max_idx=30):
     new_y = np.zeros((len(Y),max_len,max_idx))
     for idx,label_seq in enumerate(Y):
         cnt = 0
@@ -46,11 +46,11 @@ def OneHotEncode(Y,max_len,max_idx=30,label_smoothing=0.0):
             if cnt == max_len-1:
                 break
         new_y[idx,cnt,1] = 1.0 # <eos>
-    return (1-label_smoothing)*new_y+(label_smoothing/max_idx)
+    return new_y
 
 
 class LibrispeechDataset(Dataset):
-    def __init__(self, data_path, batch_size, max_label_len,bucketing,drop_last=False,training=False,label_smoothing=0.0):
+    def __init__(self, data_path, batch_size, max_label_len,bucketing,drop_last=False,training=False):
         print('Loading LibriSpeech data from',data_path,'...',flush=True)
 
         self.data_table = pd.read_csv(data_path,index_col=0)
@@ -59,7 +59,6 @@ class LibrispeechDataset(Dataset):
         self.batch_size = batch_size
         self.training = training
         self.max_label_len = max_label_len
-        self.label_smoothing = label_smoothing
 
         
         if not bucketing:
@@ -67,10 +66,7 @@ class LibrispeechDataset(Dataset):
             X,Y = load_dataset(data_path)
             max_timestep = max([len(x) for x in X])
             self.X = ZeroPadding(X,max_timestep)
-            if self.training:
-                self.Y = OneHotEncode(Y,max_label_len,label_smoothing = label_smoothing)
-            else:
-                self.Y = OneHotEncode(Y,max_label_len)
+            self.Y = OneHotEncode(Y,max_label_len)
         else:
             #print('Bucketing data ...',flush=True)
             if self.training:
@@ -92,11 +88,11 @@ class LibrispeechDataset(Dataset):
                               len(X[left])+(8-len(X[left])%8)
                     if training:
                         onehot_len = min(max([len(y) for y in Y[left:right]])+1,max_label_len)
-                        bucket_y.append(OneHotEncode(Y[left:right], onehot_len,label_smoothing = label_smoothing))
                     else:
                         onehot_len = max([len(y) for y in Y[left:right]])+1
-                        bucket_y.append(OneHotEncode(Y[left:right], onehot_len))
+                    
                     bucket_x.append(ZeroPadding(X[left:right], pad_len))
+                    bucket_y.append(OneHotEncode(Y[left:right], onehot_len))
                     
                 self.X = bucket_x
                 self.Y = bucket_y
@@ -115,10 +111,9 @@ class LibrispeechDataset(Dataset):
                 pad_len = len(X[0]) if (len(X[0]) % 8) == 0 else len(X[0])+(8-len(X[0])%8)
                 if self.training:
                     onehot_len = min(max([len(y) for y in Y])+1,self.max_label_len)
-                    return ZeroPadding(X, pad_len),OneHotEncode(Y, onehot_len,label_smoothing = self.label_smoothing)
                 else:
                     onehot_len = max([len(y) for y in Y])+1
-                    return ZeroPadding(X, pad_len),OneHotEncode(Y, onehot_len)
+                return ZeroPadding(X, pad_len),OneHotEncode(Y, onehot_len)
             else:
                 return self.X[index],self.Y[index]
         
@@ -129,11 +124,11 @@ class LibrispeechDataset(Dataset):
             return len(self.X)
 
 
-def create_dataloader(data_path, max_label_len, batch_size, shuffle, bucketing, label_smoothing, drop_last=False, training=False,
+def create_dataloader(data_path, max_label_len, batch_size, shuffle, bucketing, drop_last=False, training=False,
                     **kwargs):
     if not bucketing:
-        return DataLoader(LibrispeechDataset(data_path, batch_size,max_label_len,bucketing,training=training,
-                          label_smoothing=label_smoothing), batch_size=batch_size,shuffle=shuffle,drop_last=drop_last)
+        return DataLoader(LibrispeechDataset(data_path, batch_size,max_label_len,bucketing,training=training),
+                          batch_size=batch_size,shuffle=shuffle,drop_last=drop_last)
     else:
         return DataLoader(LibrispeechDataset(data_path, batch_size,max_label_len,bucketing,drop_last=drop_last,
-                          training=training, label_smoothing=label_smoothing), batch_size=1,shuffle=shuffle)
+                          training=training), batch_size=1,shuffle=shuffle)

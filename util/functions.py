@@ -54,7 +54,22 @@ def LetterErrorRate(pred_y,true_y,data):
         ed_accumalate.append(ed.eval(compressed_p,compressed_t)/len(compressed_t))
     return ed_accumalate
 
-def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rate, is_training, data='timit',**kwargs):
+def label_smoothing_loss(pred_y,true_y,label_smoothing=0.1):
+    # Self defined loss for label smoothing
+    # pred_y is log-scaled and true_y is one-hot format padded with all zero vector
+    assert pred_y.size() == true_y.size()
+    seq_len = torch.sum(torch.sum(true_y,dim=-1),dim=-1,keepdim=True)
+    
+    # calculate smoothen label, last term ensures padding vector remains all zero
+    class_dim = true_y.size()[-1]
+    smooth_y = ((1.0-label_smoothing)*true_y+(label_smoothing/class_dim))*torch.sum(true_y,dim=-1,keepdim=True)
+
+    loss = - torch.mean(torch.sum((torch.sum(smooth_y * pred_y,dim=-1)/seq_len),dim=-1))
+
+    return loss
+
+
+def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rate, is_training, label_smoothing=0.0, data='timit',**kwargs):
     bucketing = kwargs['bucketing']
     use_gpu = kwargs['use_gpu']
     output_class_dim = kwargs['output_class_dim']
@@ -68,11 +83,11 @@ def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rat
 
     batch_data = Variable(batch_data).type(torch.FloatTensor)
     batch_label = Variable(batch_label, requires_grad=False)
-    objective = nn.NLLLoss(ignore_index=0)
+    criterion = nn.NLLLoss(ignore_index=0)
     if use_gpu:
         batch_data = batch_data.cuda()
         batch_label = batch_label.cuda()
-        objective = objective.cuda()
+        criterion = criterion.cuda()
     # Forwarding
     optimizer.zero_grad()
     listner_feature = listener(batch_data)
@@ -81,20 +96,29 @@ def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rat
     else:
         raw_pred_seq, _ = speller(listner_feature,ground_truth=None,teacher_force_rate=0)
 
-    pred_y = torch.cat([torch.unsqueeze(each_y,1) for each_y in raw_pred_seq],1)[:,:max_label_len,:]
-    pred_y = pred_y.contiguous().permute(0,2,1)#pred_y.contiguous().view(-1,output_class_dim)
-    true_y = torch.max(batch_label,dim=2)[1][:,:max_label_len].contiguous()#.view(-1)
+    pred_y = (torch.cat([torch.unsqueeze(each_y,1) for each_y in raw_pred_seq],1)[:,:max_label_len,:]).contiguous()
 
-    loss = objective(pred_y,true_y)
+    if label_smoothing == 0.0:
+        pred_y = pred_y.permute(0,2,1)#pred_y.contiguous().view(-1,output_class_dim)
+        true_y = torch.max(batch_label,dim=2)[1][:,:max_label_len].contiguous()#.view(-1)
+
+        loss = criterion(pred_y,true_y)
+        # variable -> numpy before sending into LER calculator
+        batch_ler = LetterErrorRate(torch.max(pred_y.permute(0,2,1),dim=2)[1].cpu().numpy(),#.reshape(current_batch_size,max_label_len),
+                                    true_y.cpu().data.numpy(),data) #.reshape(current_batch_size,max_label_len), data)
+
+    else:
+        true_y = batch_label[:,:max_label_len,:].contiguous()
+        loss = label_smoothing_loss(pred_y,true_y,label_smoothing=label_smoothing)
+        batch_ler = LetterErrorRate(torch.max(pred_y,dim=2)[1].cpu().numpy(),#.reshape(current_batch_size,max_label_len),
+                                    torch.max(true_y,dim=2)[1].cpu().data.numpy(),data) #.reshape(current_batch_size,max_label_len), data)
 
     if is_training:
         loss.backward()
         optimizer.step()
 
     batch_loss = loss.cpu().data.numpy()
-    # variable -> numpy before sending into LER calculator
-    batch_ler = LetterErrorRate(torch.max(pred_y.permute(0,2,1),dim=2)[1].cpu().numpy(),#.reshape(current_batch_size,max_label_len),
-                                true_y.cpu().data.numpy(),data) #.reshape(current_batch_size,max_label_len), data)
+    
 
 
     return batch_loss, batch_ler
