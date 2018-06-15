@@ -6,6 +6,7 @@ else:
 from torch.autograd import Variable    
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions.categorical import Categorical
 
 from util.functions import TimeDistributed,CreateOnehotVariable
 import numpy as np
@@ -118,10 +119,17 @@ class Speller(nn.Module):
                 # Case 0. raw output as input
                 if self.decode_mode == 0:
                     output_word = raw_pred.unsqueeze(1)
-                # Case 1. One-hot form of raw output as input
+                # Case 1. Pick character with max probability
                 else:
                     output_word = torch.zeros_like(raw_pred)
                     for idx,i in enumerate(raw_pred.topk(1)[1]):
+                        output_word[idx,int(i)] = 1
+                    output_word = output_word.unsqueeze(1)             
+                # Case 2. Sample categotical label from raw prediction
+                else:
+                    sampled_word = Categorical(raw_pred).sample()
+                    output_word = torch.zeros_like(raw_pred)
+                    for idx,i in enumerate(sampled_word):
                         output_word[idx,int(i)] = 1
                     output_word = output_word.unsqueeze(1)
                 

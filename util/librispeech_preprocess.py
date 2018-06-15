@@ -30,7 +30,8 @@ parser.add_argument('--n_filters', dest='n_filters', action='store', default=40 
                    help='number of filters for fbank. (Default : 40)')
 parser.add_argument('--win_size', dest='win_size', action='store', default=0.025 ,
                    help='window size during feature extraction (Default : 0.025 [25ms])')
-
+parser.add_argument('--norm_x', dest='norm_x', action='store', default=False ,
+                   help='Normalize features s.t. mean = 0 std = 1')
 
 
 paras = parser.parse_args()
@@ -42,6 +43,7 @@ test_path = paras.tt_sets
 n_jobs = paras.n_jobs
 n_filters = paras.n_filters
 win_size = paras.win_size
+norm_x = paras.norm_x
 
 
 def traverse(root,path,search_fix='.flac',return_label=False):
@@ -129,10 +131,11 @@ for f in tr_file_list:
     X.append(np.load(f))
 
 # Normalize X
-mean_x = np.mean(np.concatenate(X,axis=0),axis=0)
-std_x = np.std(np.concatenate(X,axis=0),axis=0)
+if norm_x:
+    mean_x = np.mean(np.concatenate(X,axis=0),axis=0)
+    std_x = np.std(np.concatenate(X,axis=0),axis=0)
 
-results = Parallel(n_jobs=n_jobs,backend="threading")(delayed(norm)(i,mean_x,std_x) for i in tqdm(tr_file_list))
+    results = Parallel(n_jobs=n_jobs,backend="threading")(delayed(norm)(i,mean_x,std_x) for i in tqdm(tr_file_list))
 
 
 # Sort data by signal length (long to short)
@@ -198,7 +201,8 @@ for f in dev_file_list:
     X.append(np.load(f))
 
 # Normalize X
-results = Parallel(n_jobs=n_jobs,backend="threading")(delayed(norm)(i,mean_x,std_x) for i in tqdm(dev_file_list))
+if norm_x:
+    results = Parallel(n_jobs=n_jobs,backend="threading")(delayed(norm)(i,mean_x,std_x) for i in tqdm(dev_file_list))
 
 
 # Sort data by signal length (long to short)
@@ -242,7 +246,8 @@ for f in test_file_list:
     X.append(np.load(f))
 
 # Normalize X
-results = Parallel(n_jobs=n_jobs,backend="threading")(delayed(norm)(i,mean_x,std_x) for i in tqdm(test_file_list))
+if norm_x:
+    results = Parallel(n_jobs=n_jobs,backend="threading")(delayed(norm)(i,mean_x,std_x) for i in tqdm(test_file_list))
 
 
 # Sort data by signal length (long to short)
