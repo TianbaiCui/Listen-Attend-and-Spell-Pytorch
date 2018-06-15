@@ -107,7 +107,7 @@ class LibrispeechDataset(Dataset):
                 Y = []
                 for i in range(self.batch_size):
                     X.append(get_data(self.data_table,index+i))
-                    Y.append([int(v) for v in self.data_table.loc[i]['label'].split(' ')[1:]])
+                    Y.append([int(v) for v in self.data_table.loc[index+i]['label'].split(' ')[1:]])
                 pad_len = len(X[0]) if (len(X[0]) % 8) == 0 else len(X[0])+(8-len(X[0])%8)
                 if self.training:
                     onehot_len = min(max([len(y) for y in Y])+1,self.max_label_len)
