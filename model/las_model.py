@@ -120,7 +120,7 @@ class Speller(nn.Module):
                 if self.decode_mode == 0:
                     output_word = raw_pred.unsqueeze(1)
                 # Case 1. Pick character with max probability
-                else:
+                elif self.decode_mode == 1:
                     output_word = torch.zeros_like(raw_pred)
                     for idx,i in enumerate(raw_pred.topk(1)[1]):
                         output_word[idx,int(i)] = 1
