@@ -117,9 +117,10 @@ while global_step<total_steps:
     
     # Generate Example
     if conf['model_parameter']['bucketing']:
-        feature = listener(Variable(batch_data.float()).squeeze().cuda())
+        feature = listener(Variable(batch_data.float()).squeeze(0).cuda())
+        batch_label = batch_label.squeeze(0)
     else:
-        feature = listener(Variable(batch_data.float()).squeeze().cuda())
+        feature = listener(Variable(batch_data.float()).cuda())
     pred_seq, attention_score = speller(feature)
     
     pred_seq = [char.cpu() for char in pred_seq]
@@ -138,7 +139,7 @@ while global_step<total_steps:
     pd = [pd[i] for i in range(conf['training_parameter']['batch_size'])]
 
     gt = []
-    for line in (torch.max(batch_label.squeeze(),dim=-1)[1]).numpy():
+    for line in (torch.max(batch_label,dim=-1)[1]).numpy():
         tmp = ''
         for idx in line:
             if idx == 0: continue
