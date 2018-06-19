@@ -39,20 +39,26 @@ class pBLSTMLayer(nn.Module):
 # Listener is a pBLSTM stacking 3 layers to reduce time resolution 8 times
 # Input shape should be [# of sample, timestep, features]
 class Listener(nn.Module):
-    def __init__(self, input_feature_dim, listener_hidden_dim, rnn_unit, use_gpu, dropout_rate=0.0, **kwargs):
+    def __init__(self, input_feature_dim, listener_hidden_dim, listener_layer, rnn_unit, use_gpu, dropout_rate=0.0, **kwargs):
         super(Listener, self).__init__()
         # Listener RNN layer
-        self.pLSTM_layer1 = pBLSTMLayer(input_feature_dim,listener_hidden_dim, rnn_unit=rnn_unit, dropout_rate=dropout_rate)
-        self.pLSTM_layer2 = pBLSTMLayer(listener_hidden_dim*2,listener_hidden_dim, rnn_unit=rnn_unit, dropout_rate=dropout_rate)
-        self.pLSTM_layer3 = pBLSTMLayer(listener_hidden_dim*2,listener_hidden_dim, rnn_unit=rnn_unit, dropout_rate=dropout_rate)
+        self.listener_layer = listener_layer
+        assert self.listener_layer>=1,'Listener should have at least 1 layer'
+        
+        self.pLSTM_layer0 = pBLSTMLayer(input_feature_dim,listener_hidden_dim, rnn_unit=rnn_unit, dropout_rate=dropout_rate)
+
+        for i in range(1,self.listener_layer):
+            setattr(self, 'pLSTM_layer'+str(i), pBLSTMLayer(listener_hidden_dim*2,listener_hidden_dim, rnn_unit=rnn_unit, dropout_rate=dropout_rate))
+
         self.use_gpu = use_gpu
         if self.use_gpu:
             self = self.cuda()
 
     def forward(self,input_x):
-        output, _ = self.pLSTM_layer1(input_x)
-        output, _ = self.pLSTM_layer2(output)
-        output, _ = self.pLSTM_layer3(output)
+        output = self.pLSTM_layer0(input_x)
+        for i in range(1,self.listener_layer):
+            output, _ = getattr(self,'pLSTM_layer'+str(i))(output)
+        
         return output
 
 

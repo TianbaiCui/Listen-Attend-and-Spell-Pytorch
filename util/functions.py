@@ -69,10 +69,11 @@ def label_smoothing_loss(pred_y,true_y,label_smoothing=0.1):
     return loss
 
 
-def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rate, is_training, label_smoothing=0.0, data='timit',**kwargs):
+def batch_iterator(batch_data, batch_label, listener, speller, optimizer, tf_rate, is_training, data='timit',**kwargs):
     bucketing = kwargs['bucketing']
     use_gpu = kwargs['use_gpu']
     output_class_dim = kwargs['output_class_dim']
+    label_smoothing = kwargs['label_smoothing']
 
     # Load data
     if bucketing:
