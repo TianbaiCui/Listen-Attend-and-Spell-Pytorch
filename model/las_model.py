@@ -55,7 +55,7 @@ class Listener(nn.Module):
             self = self.cuda()
 
     def forward(self,input_x):
-        output = self.pLSTM_layer0(input_x)
+        output,_  = self.pLSTM_layer0(input_x)
         for i in range(1,self.listener_layer):
             output, _ = getattr(self,'pLSTM_layer'+str(i))(output)
         
