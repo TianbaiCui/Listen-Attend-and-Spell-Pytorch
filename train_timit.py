@@ -6,22 +6,28 @@ import numpy as np
 from torch.autograd import Variable
 import torch
 import sys
-import time
+from tensorboardX import SummaryWriter
+import argparse
 
 # Load config file for experiment
-try:
-    config_path = sys.argv[1]
-    conf = yaml.load(open(config_path,'r'))
-except:
-    print('Usage: python3 run_exp.py <config file path>')
+parser = argparse.ArgumentParser(description='Training script for LAS on TIMIT .')
+
+parser.add_argument('config_path', metavar='config_path', type=str,
+                     help='Path to config file for training.')
+
+paras = parser.parse_args()
+
+config_path = paras.config_path
+
+conf = yaml.load(open(config_path,'r'))
+
 
 # Parameters loading
 torch.manual_seed(conf['training_parameter']['seed'])
-num_epochs = conf['training_parameter']['num_epochs']
+total_steps = conf['training_parameter']['total_steps']
 use_pretrained = conf['training_parameter']['use_pretrained']
-training_msg = 'epoch_{:2d}_step_{:3d}_TrLoss_{:.4f}_TrWER_{:.2f}'
-epoch_end_msg = 'epoch_{:2d}_TrLoss_{:.4f}_TrWER_{:.2f}_TtLoss_{:.4f}_TtWER_{:.2f}_time_{:.2f}'
 verbose_step = conf['training_parameter']['verbose_step']
+valid_step  = conf['training_parameter']['valid_step']
 tf_rate_upperbound = conf['training_parameter']['tf_rate_upperbound']
 tf_rate_lowerbound = conf['training_parameter']['tf_rate_lowerbound']
 
@@ -31,15 +37,15 @@ tf_rate_lowerbound = conf['training_parameter']['tf_rate_lowerbound']
 X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(**conf['meta_variable'])
 train_set = create_dataloader(X_train, y_train, **conf['model_parameter'], **conf['training_parameter'], shuffle=True)
 valid_set = create_dataloader(X_val, y_val, **conf['model_parameter'], **conf['training_parameter'], shuffle=False)
-test_set = create_dataloader(X_test, y_test, **conf['model_parameter'], **conf['training_parameter'], shuffle=False)
+#test_set = create_dataloader(X_test, y_test, **conf['model_parameter'], **conf['training_parameter'], shuffle=False)
 
 # Construct LAS Model or load pretrained LAS model
+log_writer = SummaryWriter(conf['meta_variable']['training_log_dir']+conf['meta_variable']['experiment_name'])
+
 if not use_pretrained:
-    traing_log = open(conf['meta_variable']['training_log_dir']+conf['meta_variable']['experiment_name']+'.log','w')
     listener = Listener(**conf['model_parameter'])
     speller = Speller(**conf['model_parameter'])
 else:
-    traing_log = open(conf['meta_variable']['training_log_dir']+conf['meta_variable']['experiment_name']+'.log','a')
     listener = torch.load(conf['training_parameter']['pretrained_listener_path'])
     speller = torch.load(conf['training_parameter']['pretrained_speller_path'])
 optimizer = torch.optim.Adam([{'params':listener.parameters()}, {'params':speller.parameters()}],
@@ -49,42 +55,71 @@ speller_model_path = conf['meta_variable']['checkpoint_dir']+conf['meta_variable
 
 # save checkpoint with the best ler
 best_ler = 1.0
+global_step = 0
 
-for epoch in range(num_epochs):
-    epoch_head = time.time()
-    tr_loss = 0.0
-    tr_ler = []
-    tt_loss = 0.0
-    tt_ler = []
+while global_step < total_steps:
 
     # Teacher forcing rate linearly decay
-    tf_rate = tf_rate_upperbound - (tf_rate_upperbound-tf_rate_lowerbound)*(epoch/num_epochs)
+    tf_rate = tf_rate_upperbound - (tf_rate_upperbound-tf_rate_lowerbound)*(global_step/total_steps)
     
     # Training
     for batch_index,(batch_data,batch_label) in enumerate(train_set):
         batch_loss, batch_ler = batch_iterator(batch_data, batch_label, listener, speller, optimizer, 
                                                tf_rate, is_training=True, **conf['model_parameter'])
-        tr_loss += batch_loss
-        tr_ler.extend(batch_ler)
-        if (batch_index+1) % verbose_step == 0:
-            print(training_msg.format(epoch+1,batch_index+1,tr_loss[0]/(batch_index+1),sum(tr_ler)/len(tr_ler)),end='\r',flush=True)
-    training_time = float(time.time()-epoch_head)
+        global_step += 1
+
+        if global_step % verbose_step == 0:
+            log_writer.add_scalars('loss',{'train':batch_loss}, global_step)
+            log_writer.add_scalars('cer',{'train':np.array([np.array(batch_ler).mean()])}, global_step)
+        if global_step % valid_step == 0:
+            break
     
-    # Testing
-    for _,(batch_data,batch_label) in enumerate(test_set):
+    # Validation
+    dev_loss = []
+    dev_ler = []
+    for _,(batch_data,batch_label) in enumerate(valid_set):
         batch_loss, batch_ler = batch_iterator(batch_data, batch_label, listener, speller, optimizer, 
                                                tf_rate, is_training=False, **conf['model_parameter'])
-        tt_loss += batch_loss
-        tt_ler.extend(batch_ler)
+        dev_loss.append(batch_loss)
+        dev_ler.extend(batch_ler)
 
-    # Logger
-    print(epoch_end_msg.format(epoch+1,tr_loss[0]/(batch_index+1),sum(tr_ler)/len(tr_ler),
-                               tt_loss[0]/len(test_set),sum(tt_ler)/len(tt_ler),training_time),flush=True)
-    print(epoch_end_msg.format(epoch+1,tr_loss[0]/(batch_index+1),sum(tr_ler)/len(tr_ler),
-                               tt_loss[0]/len(test_set),sum(tt_ler)/len(tt_ler),training_time),flush=True,file=traing_log)
+    log_writer.add_scalars('loss',{'dev':np.array([sum(dev_loss)/len(dev_loss)])}, global_step)
+    log_writer.add_scalars('cer',{'dev':np.array([np.array(dev_ler).mean()])}, global_step)
+
+    # Generate Attention map
+    if conf['model_parameter']['bucketing']:
+        feature = listener(Variable(batch_data.float()).squeeze(0).cuda())
+        batch_label = batch_label.squeeze(0)
+    else:
+        feature = listener(Variable(batch_data.float()).cuda())
+    pred_seq, attention_score = speller(feature)
+    
+    pred_seq = [char.cpu() for char in pred_seq]
+    for t in range(len(attention_score)):
+        for h in range(len(attention_score[t])):
+            attention_score[t][h] = attention_score[t][h].cpu()
+    del feature
+    
+        
+    att_map = {i:[] for i in range(conf['training_parameter']['batch_size'])}
+    num_head = len(attention_score[0])
+    for i in range(conf['training_parameter']['batch_size']):
+        for j in range(num_head):
+            att_map[i].append([])
+    for t,head_score in enumerate(attention_score):
+        for h,att_score in enumerate(head_score):
+            for idx,att in enumerate(att_score.data.numpy()):
+                att_map[idx][h].append(att)
+    for i in range(conf['training_parameter']['batch_size']-1):
+        for j in range(num_head):
+            m = np.repeat(np.expand_dims(np.array(att_map[i][j]),0),3,axis=0)
+            log_writer.add_image('attention_'+str(i)+'_head_'+str(j),
+                                 torch.FloatTensor(m[:,:,:]), global_step)
+
+
 
     # Checkpoint
-    if best_ler >= sum(tt_ler)/len(tt_ler):
-        best_ler = sum(tt_ler)/len(tt_ler)
+    if best_ler >= sum(dev_ler)/len(dev_ler):
+        best_ler = sum(dev_ler)/len(dev_ler)
         torch.save(listener, listener_model_path)
         torch.save(speller, speller_model_path)

@@ -133,9 +133,9 @@ while global_step<total_steps:
     pd = {i:'' for i in range(conf['training_parameter']['batch_size'])}
     for t,char in enumerate(pred_seq):
         for idx,i in enumerate(torch.max(char,dim=-1)[1]):
-            if int(i) == 0: continue
-            if int(i) == 1: break
-            pd[idx] += idx2char[int(i)]
+            if '<eos>' not in pd[idx]:
+                pd[idx] += idx2char[int(i)]
+
     pd = [pd[i] for i in range(conf['training_parameter']['batch_size'])]
 
     gt = []

@@ -7,7 +7,7 @@ Feel free to use/modify them, any bug report or improvement suggestion will be a
 
 ### TIMIT
 
-The input feature is MFCC 39 (13+delta+accelerate), and the output phoneme classes is reduced from 61 to 39 classes during evaluation. This implement achieves about 34% phoneme error rate on TIMIT's testing set (using original setting in the paper without hyper parameter tuning, models are stored in [`checkpoint/`](checkpoint/)). It's not a remarkable score but please notice that deep end2end ASR without special designed loss function such as LAS requires larger corpus to achieve outstanding performance.
+The input feature is MFCC 39 (13+delta+accelerate), and the output phoneme classes is reduced from 61 to 39 classes during evaluation. This implement achieves about 26% phoneme error rate on TIMIT's testing set (using original setting in the paper without hyper parameter tuning, models are stored in [`checkpoint/`](checkpoint/)). It's not a remarkable score but please notice that deep end2end ASR without special designed loss function such as LAS requires larger corpus to achieve outstanding performance.
 
 - Learning Curve
 
@@ -163,7 +163,7 @@ Be aware of some differences between this implementation and the originally prop
 
 ## Acknowledgements
 - Special thanks to [William Chan](http://williamchan.ca/), the first author of LAS, for answering my questions during implementation.
-- Thanks [xiaoming](https://github.com/lezasantaizi) for identifying several issues in our implementation.
+- Thanks [xiaoming](https://github.com/lezasantaizi), [Odie Ko](https://github.com/odie2630463) for identifying several issues in our implementation.
 
 ## References
 - TIMIT preprocessing : https://github.com/Faur/TIMIT
