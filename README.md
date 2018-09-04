@@ -14,7 +14,7 @@ This implement achieves about 34% phoneme error rate on TIMIT's testing set (usi
 
 #### Attention Visualization & Recognition Result
 
-Result of the first sample in TIMIT testing set.
+Result of the first sample in TIMIT testing set. Training log is availible in [here](log/), use ```tensorboard --logdir=las_example/``` to access.
 
 ![](log/attention.jpg)
 
