@@ -1,4 +1,3 @@
-from six.moves import cPickle
 import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Dataset
@@ -50,7 +49,7 @@ def OneHotEncode(Y,max_len,max_idx=30):
 
 
 class LibrispeechDataset(Dataset):
-    def __init__(self, data_path, batch_size, max_label_len,bucketing,listener_layer,drop_last=False,training=False):
+    def __init__(self, data_path, batch_size, max_label_len,bucketing,listener_layer,drop_last=False,training=False, **kwargs):
         print('Loading LibriSpeech data from',data_path,'...',flush=True)
 
         self.data_table = pd.read_csv(data_path,index_col=0)

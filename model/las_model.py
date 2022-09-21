@@ -1,3 +1,5 @@
+from curses import raw
+from logging.config import listen
 import torch
 if torch.cuda.is_available():
     import torch.cuda as device
@@ -86,11 +88,11 @@ class Speller(nn.Module):
     # Stepwise operation of each sequence
     def forward_step(self,input_word, last_hidden_state,listener_feature):
         rnn_output, hidden_state = self.rnn_layer(input_word,last_hidden_state)
-        attention_score, context = self.attention(rnn_output,listener_feature)
+        context = self.attention(rnn_output,listener_feature)
         concat_feature = torch.cat([rnn_output.squeeze(dim=1),context],dim=-1)
-        raw_pred = self.softmax(self.character_distribution(concat_feature))
+        # raw_pred = self.softmax(self.character_distribution(concat_feature))
 
-        return raw_pred, hidden_state, context, attention_score
+        return self.character_distribution(concat_feature), hidden_state, context #, attention_score
 
     def forward(self, listener_feature, ground_truth=None, teacher_force_rate = 0.9):
         if ground_truth is None:
@@ -106,18 +108,18 @@ class Speller(nn.Module):
 
         hidden_state = None
         raw_pred_seq = []
-        output_seq = []
-        attention_record = []
 
-        if (ground_truth is None) or (not teacher_force):
-            max_step = self.max_label_len
-        else:
-            max_step = ground_truth.size()[1]
+        #attention_record = []
+        max_step = self.max_label_len
+        # if (ground_truth is None) or (not teacher_force):
+        #     max_step = self.max_label_len
+        # else:
+        #     max_step = ground_truth.size()[1]
 
         for step in range(max_step):
-            raw_pred, hidden_state, context, attention_score = self.forward_step(rnn_input, hidden_state, listener_feature)
+            raw_pred, hidden_state, context = self.forward_step(rnn_input, hidden_state, listener_feature)
             raw_pred_seq.append(raw_pred)
-            attention_record.append(attention_score)
+            #attention_record.append(attention_score)
             # Teacher force - use ground truth as next step's input
             if teacher_force:
                 output_word = ground_truth[:,step:step+1,:].type(self.float_type)
@@ -138,10 +140,12 @@ class Speller(nn.Module):
                     for idx,i in enumerate(sampled_word):
                         output_word[idx,int(i)] = 1
                     output_word = output_word.unsqueeze(1)
-                
+            
+            #print(output_word.shape)
+            #print(context.shape)
             rnn_input = torch.cat([output_word,context.unsqueeze(1)],dim=-1)
 
-        return raw_pred_seq,attention_record
+        return raw_pred_seq #,attention_record
 
 
 # Attention mechanism
@@ -201,13 +205,20 @@ class Attention(nn.Module):
         
         
 
-        return attention_score,context
+        return context
 
+class LAS(nn.Module):
+    def __init__(self, tf_rate, **kwargs):
+        super(LAS, self).__init__()
+        self.tf_rate = tf_rate
 
+        self.listener = Listener(dropout_rate=0.0, **kwargs)
+        self.speller = Speller(**kwargs)
 
+    def forward(self, input, ground_truth):
+        listener_feature = self.listener(input)
+        raw_pred_seq = self.speller(listener_feature, ground_truth, self.tf_rate)
+        return raw_pred_seq
 
-
-
-
-
-
+    def update_tf_rate(self, tf_rate):
+        self.tf_rate = tf_rate
