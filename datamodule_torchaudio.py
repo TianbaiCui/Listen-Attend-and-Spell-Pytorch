@@ -46,7 +46,7 @@ class DataModule(LightningDataModule):
             'y': 26,
             'z': 27,
             "'": 28,
-            "<UNK>": 29,
+            "<EOS>": 29,
         }
         index_map = {v: k for k, v in char_map.items()}
         index_map[1] = ' '
@@ -66,6 +66,7 @@ class DataModule(LightningDataModule):
             else:
                 ch = self.char_map[c]
             int_sequence.append(ch)
+        int_sequence.append(self.char_map['<EOS>'])
         return int_sequence
 
     def int_to_text(self, labels):
